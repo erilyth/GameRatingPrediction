@@ -1,4 +1,7 @@
 data/test
 data/train
 data/sequences
+data/checkpoints
+data/logs
 data/data_file.csv
+**/*.pyc

@@ -10,10 +10,8 @@ from keras.layers import Input
 
 # Creates feature vectors for each of the frames and stores them in data/sequences
 
-class_limit = None  # Number of classes to extract. Can be 1-101 or None for all.
-
 # Get the dataset.
-data = DataSet(class_limit=class_limit)
+data = DataSet()
 
 # Get model with pretrained weights.
 base_model = InceptionV3(
