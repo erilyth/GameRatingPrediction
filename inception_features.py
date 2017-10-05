@@ -8,6 +8,7 @@ from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.models import Model, load_model
 from keras.layers import Input
 
+# Creates feature vectors for each of the frames and stores them in data/sequences
 
 class_limit = None  # Number of classes to extract. Can be 1-101 or None for all.
 

@@ -115,7 +115,7 @@ class DataSet():
 
         return np.array(X), np.array(y)
 
-    def frame_generator(self, batch_size, train_test, data_type, concat=False):
+    def frame_generator(self, batch_size, train_test, data_type="features", concat=False):
         """Return a generator that we can use to train on. There are
         a couple different things we can return:
 
@@ -156,7 +156,7 @@ class DataSet():
 
                 if concat:
                     # We want to pass the sequence back as a single array. This
-                    # is used to pass into an MLP rather than an RNN.
+                    # is used to pass into a fully connected neural network rather than an RNN.
                     sequence = np.concatenate(sequence).ravel()
 
                 X.append(sequence)
@@ -171,8 +171,7 @@ class DataSet():
     def get_extracted_sequence(self, data_type, sample):
         """Get the saved extracted features."""
         filename = sample[2]
-        path = self.sequence_path + filename + '-' + str(self.seq_length) + \
-            '-' + data_type + '.txt'
+        path = self.sequence_path + sample[0] + '--' + sample[1] + '--' + filename + '--features.txt'
         if os.path.isfile(path):
             # Use a dataframe/read_csv for speed increase over numpy.
             features = pd.read_csv(path, sep=" ", header=None)
@@ -213,7 +212,7 @@ class DataSet():
             start_frame += 300
 
         # Cut off the last one if needed.
-        return input_list
+        return output
 
     def print_class_from_prediction(self, predictions, nb_to_return=5):
         """Given a prediction, print the top classes."""
