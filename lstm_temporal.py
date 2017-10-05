@@ -9,7 +9,7 @@ import time
 def train(data_type, saved_model=None):
 
     nb_epoch = 1000000
-    batch_size = 32
+    batch_size = 1
 
     data = DataSet()
 
@@ -42,13 +42,12 @@ def train(data_type, saved_model=None):
 
     # Helper: Save the model.
     checkpointer = ModelCheckpoint(
-        filepath='./data/checkpoints/' + 'lstm' + '-' + data_type + \
-            '.{epoch:03d}-{val_loss:.3f}.hdf5',
+        filepath='./data/checkpoints/' + 'lstm' + '-' + data_type + '.hdf5',
         verbose=1,
         save_best_only=True)
 
     # Helper: Save results.
-    csv_logger = CSVLogger('./data/logs/' + 'lstm' + '-' + 'training-' + str(time.time()) + '.log')
+    csv_logger = CSVLogger('./data/logs/' + 'lstm' + '-' + 'training.log')
 
     # Use fit generator.
     model.fit_generator(

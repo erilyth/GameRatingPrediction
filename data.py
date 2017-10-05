@@ -110,16 +110,15 @@ class DataSet():
                     sequence = self.build_image_sequence(frames)
                 else:
                     # Get the sequence from disk.
-                    dummy = [0 for el in range(2048)]
+                    dummy = np.asarray([0 for el in range(2048)])
                     sequence = self.get_extracted_sequence(data_type, sample)
                     if len(sequence) > 130:
                         sequence = sequence[:130]
+
                     if len(sequence) < 130:
                         deficit = 130 - len(sequence)
                         for det in range(deficit):
-                            sequence.append(dummy)
-
-                    print len(sequence)
+                            sequence = np.vstack((sequence,dummy))
 
                 if sequence is None:
                     print("Can't find sequence. Did you generate them?")
