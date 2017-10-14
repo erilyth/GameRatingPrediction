@@ -22,6 +22,11 @@ def extract_files():
 
             for video_path in class_files:
                 # Get the parts of the file.
+
+                video_details = open(video_path[:-4] + '.txt', 'r').readlines()[0].split(';;')
+                video_genre = video_details[0]
+                video_description = video_details[1]
+
                 video_parts = get_video_parts(video_path)
 
                 train_or_test, classname, filename_no_ext, filename = video_parts
@@ -35,7 +40,7 @@ def extract_files():
 
                 nb_frames = get_nb_frames_for_video(video_parts)
 
-                data_file.append([train_or_test, classname, filename_no_ext, nb_frames])
+                data_file.append([train_or_test, classname, filename_no_ext, nb_frames, video_genre, video_description])
 
                 print("Generated %d frames for %s" % (nb_frames, filename_no_ext))
 

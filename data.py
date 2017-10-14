@@ -10,6 +10,8 @@ from keras.utils import np_utils
 
 from keras.preprocessing.image import img_to_array, load_img
 
+genre_dict = {"knitting": 0, "shotput": 1}
+
 class DataSet():
 
     def __init__(self, class_limit=None, image_shape=(224, 224, 3)):
@@ -100,7 +102,7 @@ class DataSet():
                 # Get a random sample.
                 sample = random.choice(data)
 
-                # Check to see if we've already saved this sequence.
+                # If you are just running it to generate the features, we just need to use the image
                 if data_type is "images":
                     # Get and resample frames.
                     frames = self.get_frames_for_sample(sample)
@@ -109,7 +111,8 @@ class DataSet():
                     # Build the image sequence
                     sequence = self.build_image_sequence(frames)
                 else:
-                    # Get the sequence from disk.
+                    # Get all the required data to train our final joint model that predicts the genre and rating
+                    # while also considering the description as an input to the model
                     dummy = np.asarray([0 for el in range(2048)])
                     sequence = self.get_extracted_sequence(data_type, sample)
                     if len(sequence) > 130:
@@ -130,9 +133,14 @@ class DataSet():
                     sequence = np.concatenate(sequence).ravel()
 
                 X.append(sequence)
+                # Get encoded description here
+                X1.append(sample[5].strip())
                 y.append(self.get_class_one_hot(sample[1]))
+                # Get one hot encoding here
+                y1.append(genre_dict[sample[4].strip()])
 
-            yield np.array(X), np.array(y)
+            # Frame representations, descriptions, score class and genre
+            yield [np.array(X), np.array(X1)], [np.array(y), np.array(y1)]
 
     def build_image_sequence(self, frames):
         """Given a set of frames (filenames), build our sequence."""
