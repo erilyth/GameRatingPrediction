@@ -45,7 +45,7 @@ def create_url_list():
 def scrape_url_list():
     for genre_idx in range(len(genres)):
         url_pages = open('urls/' + genres[genre_idx] + '.txt', 'r').readlines()
-        #url_pages = ['http://www.metacritic.com/game/playstation-4/danganronpa-v3-killing-harmony',] #Example
+        #url_pages = ['http://www.metacritic.com/game/playstation/tekken-2',] #Example
         for url in url_pages:
             url = url.strip()
             url_parts = url.split('/')
@@ -59,19 +59,19 @@ def scrape_url_list():
                 metascore = driver.find_elements_by_xpath('//*[@id="main"]/div/div[3]/div/div/div[2]/div[1]/div[1]/div/div/a/div/span')[0].get_attribute('innerHTML').strip()
                 userscore = driver.find_elements_by_xpath('//*[@id="main"]/div/div[3]/div/div/div[2]/div[1]/div[2]/div[1]/div/a/div')[0].get_attribute('innerHTML').strip()
                 summary = driver.find_elements_by_xpath('//*[@id="main"]/div/div[3]/div/div/div[2]/div[2]/div[1]/ul/li/span[2]')[0].text.strip().replace('\n', ' ')[:-8]
-                age_rating = driver.find_elements_by_xpath('//*[@id="main"]/div/div[3]/div/div/div[2]/div[2]/div[2]/ul/li[4]/span[2]')[0].get_attribute('innerHTML').strip()
-                developer = driver.find_elements_by_xpath('//*[@id="main"]/div/div[3]/div/div/div[2]/div[2]/div[2]/ul/li[1]/span[2]')[0].get_attribute('innerHTML').strip()
+                age_rating = driver.find_elements_by_class_name('product_rating')[0].find_elements_by_class_name('data')[0].text.strip()
+                developer = driver.find_elements_by_class_name('developer')[0].find_elements_by_class_name('data')[0].text.strip()
                 print(developer, age_rating, metascore, userscore, summary, trailer_url)
                 os.system('wget "' + trailer_url + '" --proxy=off -O ' + filename + '.mp4 -o templog.txt')
                 textfile = open(filename + '.txt', 'w')
-                textfile.write(metascore + ';;;' + userscore + ';;;' + summary + ';;;' + developer + ';;;' + age_rating + ';;;' + genres[genre_idx] + '\n')
+                textfile.write(metascore + ';;;' + userscore + ';;;' + summary + ';;;' + developer + ';;;' + age_rating + ';;;' + genres[genre_idx] + ';;;' + trailer_url + '\n')
                 textfile.close()
             except Exception as e:
                 print 'Failed to get game details for', url, 'due to error: ', e
 
 
-create_url_list()
-#scrape_url_list()
+#create_url_list()
+scrape_url_list()
 
 display.stop()
 driver.quit()
