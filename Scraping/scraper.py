@@ -21,6 +21,8 @@ driver = webdriver.Chrome(chromedriver, chrome_options=chrome_options)
 
 import re
 
+# For the website: http://www.metacritic.com/
+
 genres = ['action', 'adventure', 'fighting', 'first-person', 'flight', 'party', 'platformer', 'puzzle', 'racing', 'real-time', 'role-playing', 'simulation', 'sports', 'strategy', 'third-person', 'turn-based', 'wargame', 'wrestling']
 pages = [290, 61, 18, 53, 7, 4, 36, 17, 45, 26, 67, 38, 68, 66, 30, 22, 2, 4]
 
@@ -62,8 +64,8 @@ def scrape_url_list():
                 age_rating = driver.find_elements_by_class_name('product_rating')[0].find_elements_by_class_name('data')[0].text.strip()
                 developer = driver.find_elements_by_class_name('developer')[0].find_elements_by_class_name('data')[0].text.strip()
                 print(developer, age_rating, metascore, userscore, summary, trailer_url)
-                os.system('wget "' + trailer_url + '" --proxy=off -O ' + filename + '-old.mp4 -o templog.txt')
-                os.system("ffmpeg -i " + filename + "-old.mp4" + " -s 640x480 -b:v 512k -vcodec mpeg1video -acodec copy " + filename + ".mp4")
+                os.system('wget ' + trailer_url + ' --proxy=off -O ' + filename + '-old.mp4 -o templog.txt')
+                os.system("ffmpeg -i " + filename + "-old.mp4" + " -s 640x480 -vcodec h264 -acodec mp2 -t 00:03:00 " + filename + ".mp4 -y ")
                 os.system("rm " + filename + "-old.mp4")
                 textfile = open(filename + '.txt', 'w')
                 textfile.write(metascore + ';;;' + userscore + ';;;' + summary + ';;;' + developer + ';;;' + age_rating + ';;;' + genres[genre_idx] + ';;;' + trailer_url + '\n')
