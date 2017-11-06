@@ -43,12 +43,12 @@ def create_url_list():
 
 
 def scrape_url_list():
-    positive_critic = open('positivecritic.txt', 'w')
-    neutral_critic = open('neutralcritic.txt', 'w')
-    negative_critic = open('negativecritic.txt', 'w')
-    positive_user = open('positiveuser.txt', 'w')
-    neutral_user = open('neutraluser.txt', 'w')
-    negative_user = open('negativeuser.txt', 'w')
+    positive_critic = open('positivecritic.txt', 'a')
+    neutral_critic = open('neutralcritic.txt', 'a')
+    negative_critic = open('negativecritic.txt', 'a')
+    positive_user = open('positiveuser.txt', 'a')
+    neutral_user = open('neutraluser.txt', 'a')
+    negative_user = open('negativeuser.txt', 'a')
     for genre_idx in range(len(genres)):
         url_pages = open('urls/' + genres[genre_idx] + '.txt', 'r').readlines()
         #url_pages = ['http://www.metacritic.com/game/playstation/tekken-2',] #Example
@@ -64,8 +64,8 @@ def scrape_url_list():
                 critic_review_list = critic_reviews.find_elements_by_class_name('review_section')
                 for review in critic_review_list:
                     if len(review.find_elements_by_class_name('review_body')) > 0:
-                        description = review.find_elements_by_class_name('review_body')[0].get_attribute('innerHTML').strip()
-                        score = review.find_elements_by_class_name('metascore_w')[0].get_attribute('innerHTML').encode().strip()
+                        description = review.find_elements_by_class_name('review_body')[0].get_attribute('innerHTML').encode('utf8').strip()
+                        score = review.find_elements_by_class_name('metascore_w')[0].get_attribute('innerHTML').encode('utf8').strip()
                         description = description.replace('\n', ' ')
                         score = int(float(score))
                         if score > 75:
@@ -87,12 +87,12 @@ def scrape_url_list():
                 user_review_list = user_reviews.find_elements_by_class_name('review_section')
                 for review_idx in range(len(user_review_list)):
                     if len(user_review_list[review_idx].find_elements_by_class_name('review_body')) > 0:
-                        score = user_review_list[review_idx].find_elements_by_class_name('metascore_w')[0].get_attribute('innerHTML').encode().strip()
+                        score = user_review_list[review_idx].find_elements_by_class_name('metascore_w')[0].get_attribute('innerHTML').encode('utf8').strip()
                         description = user_review_list[review_idx].find_elements_by_class_name('review_body')[0]
                         if len(description.find_elements_by_class_name('blurb_collapsed')) == 0:
-                            description = description.find_elements_by_tag_name('span')[0].text.strip()
+                            description = description.find_elements_by_tag_name('span')[0].text.strip().encode('utf8')
                         else:
-                            description = description.find_elements_by_class_name('blurb_collapsed')[0].text.strip()[:-8]
+                            description = description.find_elements_by_class_name('blurb_collapsed')[0].text.strip().encode('utf8')[:-8]
                         description = description.replace('\n', ' ')
                         score = float(score)
                         if score > 7.5:
