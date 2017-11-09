@@ -21,7 +21,7 @@ class DataSet():
         """
         self.class_limit = class_limit
         self.sequence_path = './data/sequences/'
-        self.max_frames = 8000  # max number of frames a video can have for us to use it
+        self.max_frames = 720  # max number of frames a video can have for us to use it
 
         # Get the data.
         self.data = self.get_data()
@@ -30,11 +30,11 @@ class DataSet():
         self.classes = self.get_classes()
 
         self.image_shape = image_shape
-    
+
     def get_data(self):
         """Load our data from file."""
         with open('./data/data_file.csv', 'r') as fin:
-            reader = csv.reader(fin)
+            reader = csv.reader(fin, delimiter=';')
             data = list(reader)
 
         return data
@@ -44,8 +44,8 @@ class DataSet():
         only return the classes we need."""
         classes = []
         for item in self.data:
-            if item[1] not in classes:
-                classes.append(item[1])
+            if item[2] not in classes:
+                classes.append(item[2])
 
         # Sort them.
         classes = sorted(classes)
@@ -73,10 +73,7 @@ class DataSet():
         train = []
         test = []
         for item in self.data:
-            if item[0] == 'train':
-                train.append(item)
-            else:
-                test.append(item)
+            train.append(item)
         return train, test
 
     def frame_generator(self, batch_size, train_test, data_type="features", concat=False):
@@ -115,11 +112,11 @@ class DataSet():
                     # while also considering the description as an input to the model
                     dummy = np.asarray([0 for el in range(2048)])
                     sequence = self.get_extracted_sequence(data_type, sample)
-                    if len(sequence) > 130:
-                        sequence = sequence[:130]
+                    if len(sequence) > 720:
+                        sequence = sequence[:720]
 
-                    if len(sequence) < 130:
-                        deficit = 130 - len(sequence)
+                    if len(sequence) < 720:
+                        deficit = 720 - len(sequence)
                         for det in range(deficit):
                             sequence = np.vstack((sequence,dummy))
 
@@ -148,8 +145,8 @@ class DataSet():
 
     def get_extracted_sequence(self, data_type, sample):
         """Get the saved extracted features."""
-        filename = sample[2]
-        path = self.sequence_path + sample[0] + '--' + sample[1] + '--' + filename + '--features.txt'
+        filename = sample[0]
+        path = self.sequence_path + filename + '--features.txt'
         if os.path.isfile(path):
             # Use a dataframe/read_csv for speed increase over numpy.
             features = pd.read_csv(path, sep=" ", header=None)
@@ -160,8 +157,8 @@ class DataSet():
     def get_frames_for_sample(self, sample):
         """Given a sample row from the data file, get all the corresponding frame
         filenames."""
-        path = './data/' + sample[0] + '/' + sample[1] + '/'
-        filename = sample[2]
+        path = './data/frames/'
+        filename = sample[0]
         images = sorted(glob.glob(path + filename + '*jpg'))
         return images
 
@@ -172,22 +169,22 @@ class DataSet():
     def rescale_list(self, input_list):
         """
         Limit the number of frames.
-        Assuming a trailer is around 3 minutes long, it has around 4000 frames
-        Every 300 frames, consider 10 frames skipping 4 frames each.
-        ex: Select frame 300, 305, 310, 315, 320, 325, 330, 335, 340, 345 and then 600, 605, 610 ....
+        Assuming a trailer is around 3 minutes long, it has around 720 frames (4 frames per second)
+        Every 150 frames, consider 10 frames.
+        ex: Select frame 150, 151, 152, 153, 154, 155, 156, 157, 158, 159 and then 300, 301, 302 ....
         """
 
         # Build our new output.
         output = []
 
-        start_frame = 300
+        start_frame = 50
         while start_frame < len(input_list):
             for j in range(10):
-                cur_frame = start_frame + 5 * j
-                if cur_frame > len(input_list):
+                cur_frame = start_frame + j
+                if cur_frame >= len(input_list):
                     break
                 output.append(input_list[cur_frame])
-            start_frame += 300
+            start_frame += 150
 
         # Cut off the last one if needed.
         return output

@@ -12,20 +12,25 @@ def extract_files():
     `ffmpeg -i video.mpg image-%04d.jpg`
     """
     data_file = []
-    folders = ['./train/', './test/']
+    folders = ['./train/',]#, './test/']
 
     for folder in folders:
         class_folders = glob.glob(folder + '*')
 
         for vid_class in class_folders:
-            class_files = glob.glob(vid_class + '/*.avi')
+            class_files = glob.glob(vid_class + '/*.mp4')
 
             for video_path in class_files:
                 # Get the parts of the file.
 
-                video_details = open(video_path[:-4] + '.txt', 'r').readlines()[0].split(';;')
-                video_genre = video_details[0]
-                video_description = video_details[1]
+                video_details = open(video_path[:-4] + '.txt', 'r').readlines()[0].split(';;;')
+                critic_score = video_details[0]
+                user_score = video_details[1]
+                video_description = video_details[2]
+                game_designer = video_details[3]
+                video_age_rating = video_details[4]
+                video_genre = video_details[5]
+                video_trailer_url = video_details[6]
 
                 video_parts = get_video_parts(video_path)
 
@@ -34,18 +39,17 @@ def extract_files():
                 if not check_already_extracted(video_parts):
                     src = train_or_test + '/' + classname + '/' + \
                         filename
-                    dest = train_or_test + '/' + classname + '/' + \
+                    dest = 'frames/' + \
                         filename_no_ext + '-%04d.jpg'
-                    call(["ffmpeg", "-i", src, dest])
+                    call(["ffmpeg", "-i", src, "-r", "4", dest])
 
                 nb_frames = get_nb_frames_for_video(video_parts)
 
-                data_file.append([train_or_test, classname, filename_no_ext, nb_frames, video_genre, video_description])
-
+                data_file.append([filename_no_ext, nb_frames, critic_score, user_score, video_description, game_designer, video_age_rating, video_genre, video_trailer_url])
                 print("Generated %d frames for %s" % (nb_frames, filename_no_ext))
 
     with open('data_file.csv', 'w') as fout:
-        writer = csv.writer(fout)
+        writer = csv.writer(fout, delimiter=';')
         writer.writerows(data_file)
 
     print("Extracted and wrote %d video files." % (len(data_file)))
@@ -53,7 +57,7 @@ def extract_files():
 def get_nb_frames_for_video(video_parts):
     # Get number of frames in video
     train_or_test, classname, filename_no_ext, _ = video_parts
-    generated_files = glob.glob(train_or_test + '/' + classname + '/' +
+    generated_files = glob.glob('frames/' +
                                 filename_no_ext + '*.jpg')
     return len(generated_files)
 
@@ -70,13 +74,13 @@ def get_video_parts(video_path):
 def check_already_extracted(video_parts):
     """Check to see if we created the -0001 frame of this file."""
     train_or_test, classname, filename_no_ext, _ = video_parts
-    return bool(os.path.exists(train_or_test + '/' + classname +
-                               '/' + filename_no_ext + '-0001.jpg'))
+    return bool(os.path.exists('frames/' +
+                               filename_no_ext + '-0001.jpg'))
 
 def main():
     """
     Extract images from videos and build a new file that we
-    can use as our data input file. 
+    can use as our data input file.
     It will have format: [train|test], class, filename, nb frames
     """
     extract_files()

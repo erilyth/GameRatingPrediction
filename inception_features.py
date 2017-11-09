@@ -41,22 +41,25 @@ def extract(image_path):
 # Loop through data.
 pbar = tqdm(total=len(data.data))
 for video in data.data:
-
+    print video[0]
     # Get the path to the sequence for this video.
-    path = './data/sequences/' + video[0] + '--' + video[1] + '--' + video[2] + '--features.txt'
+    path = './data/sequences/' + video[0] + '--features.txt'
 
     # Check if we already have it.
-    if os.path.isfile(path):
-        pbar.update(1)
-        continue
+    #if os.path.isfile(path):
+    #    pbar.update(1)
+    #    continue
 
     frames = data.get_frames_for_sample(video)
     frames = data.rescale_list(frames)
+
 
     sequence = []
     for image_path in frames:
         features = extract(image_path)
         sequence.append(features)
+
+    print sequence
 
     # Save the sequence.
     np.savetxt(path, sequence)
