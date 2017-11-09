@@ -26,8 +26,17 @@ class DataSet():
         # Get the data.
         self.data = self.get_data()
 
-        # Get the classes.
-        self.classes = self.get_classes()
+        # Contain intermediate info for the entire dataset
+        self.score_classes = self.get_score_classes()
+        self.genre_classes = self.get_genre_classes()
+        self.summaries = self.get_summaries()
+        self.features = self.get_features()
+
+        # Contain the final data split into train and test
+        self.train = {}
+        self.test = {}
+
+        self.split_train_test()
 
         self.image_shape = image_shape
 
@@ -39,109 +48,119 @@ class DataSet():
 
         return data
 
-    def get_classes(self):
-        """Extract the classes from our data. If we want to limit them,
-        only return the classes we need."""
-        classes = []
+    def get_score_classes(self):
+        """
+        Extract the score classes from our data.
+        """
+        score_classes = []
         for item in self.data:
-            if item[2] not in classes:
-                classes.append(item[2])
+            critic_score = item[2]
+            if '-' in critic_score or 'tbd' in critic_score:
+                critic_score = "50"
+            critic_score = float(critic_score)
+            user_score = item[3]
+            if '-' in user_score or 'tbd' in user_score:
+                user_score = "5"
+            user_score = float(user_score) * 10
+            final_score = critic_score * 0.5 + user_score * 0.5
+            final_score = int(round(final_score, -1))/10
+            final_score_one_hot = [0.0] * 10
+            final_score_one_hot[final_score-1] = 1.0
+            score_classes.append(final_score_one_hot)
+        return score_classes
 
-        # Sort them.
-        classes = sorted(classes)
 
-        # Return.
-        if self.class_limit is not None:
-            return classes[:self.class_limit]
-        else:
-            return classes
+    def get_genre_classes(self):
+        """
+        Extract the genre classes from our data.
+        """
+        genre_class_dict = {
+            "action": 0,
+            "role-playing": 1,
+            "adventure": 1,
+            "third-person": 1,
+            "first-person": 1,
+            "strategy": 2,
+            "turn-based": 2,
+            "wargame": 2,
+            "puzzle": 2,
+            "platformer": 2,
+            "sports": 3,
+            "fighting": 3,
+            "racing": 3,
+            "wrestling": 3,
+            "simulation": 4,
+            "flight": 4,
+            "party": 4,
+            "real-time": 4
+        }
+        genre_classes = []
+        for item in self.data:
+            genre = item[7]
+            genre_classes.append(genre_class_dict[genre])
+        return genre_classes
 
-    def get_class_one_hot(self, class_str):
-        """Given a class as a string, return its number in the classes
-        list. This lets us encode and one-hot it for training."""
-        # Encode it first.
-        label_encoded = self.classes.index(class_str)
 
-        # Now one-hot it.
-        label_hot = np_utils.to_categorical(label_encoded, len(self.classes))
-        label_hot = label_hot[0]  # just get a single row
+    def get_summaries(self):
+        summaries = []
+        for item in self.data:
+            summary = item[4]
+            summaries.append(summary)
+        return summaries
 
-        return label_hot
+
+    def get_features(self):
+        features = []
+        dummy = np.asarray([0 for el in range(2048)]) # Inception feature layer output size
+        for item in self.data:
+            sequence = self.get_extracted_sequence("features", item)
+            if len(sequence) > 360:
+                sequence = sequence[:360]
+            if len(sequence) < 360:
+                deficit = 360 - len(sequence)
+                for det in range(deficit):
+                    sequence = np.vstack((sequence,dummy))
+            feeatures.append(sequence)
+        return features
+
 
     def split_train_test(self):
         """Split the data into train and test groups."""
-        train = []
-        test = []
-        for item in self.data:
-            train.append(item)
-        return train, test
+        train_percent = 0.8
+        train_elems = {"score":[], "genre":[], "features":[], "summary":[]}
+        test_elems = {"score":[], "genre":[], "features":[], "summary":[]}
+        for item_idx in range(len(self.data)):
+            if random.uniform() <= train_percent:
+                train_elems["score"].append(self.score_classes[item_idx])
+                train_elems["genre"].append(self.genre_classes[item_idx])
+                train_elems["features"].append(self.features[item_idx])
+                train_elems["summary"].append(self.summaries[item_idx])
+            else:
+                test_elems["score"].append(self.score_classes[item_idx])
+                test_elems["genre"].append(self.genre_classes[item_idx])
+                test_elems["features"].append(self.features[item_idx])
+                test_elems["summary"].append(self.summaries[item_idx])
 
-    def frame_generator(self, batch_size, train_test, data_type="features", concat=False):
-        """Return a generator that we can use to train on. There are
-        a couple different things we can return:
+        self.train = train_elems
+        self.test = test_elems
 
-        data_type: 'features', 'images'
-        """
-        # Get the right dataset for the generator.
-        train, test = self.split_train_test()
-        data = train if train_test == 'train' else test
+    def frame_generator_features(self, batch_size, train_test):
+        data = self.train if train_test == 'train' else self.test
 
         print("Creating %s generator with %d samples." % (train_test, len(data)))
 
         while 1:
-            X, y = [], []
-
-            # Generate batch_size samples.
+            X, X1, y, y1 = [], [], [], []
             for _ in range(batch_size):
-                # Reset to be safe.
-                sequence = None
+                sample = random.randint(0, len(data))
+                X.append(data["features"][sample])
+                X1.append(data["summary"][sample])
+                y.append(data["score"][sample])
+                y1.append(data["genre"][sample])
 
-                # Get a random sample.
-                sample = random.choice(data)
-
-                # If you are just running it to generate the features, we just need to use the image
-                if data_type is "images":
-                    # Get and resample frames.
-                    frames = self.get_frames_for_sample(sample)
-                    frames = self.rescale_list(frames)
-
-                    # Build the image sequence
-                    sequence = self.build_image_sequence(frames)
-                else:
-                    # Get all the required data to train our final joint model that predicts the genre and rating
-                    # while also considering the description as an input to the model
-                    dummy = np.asarray([0 for el in range(2048)])
-                    sequence = self.get_extracted_sequence(data_type, sample)
-                    if len(sequence) > 720:
-                        sequence = sequence[:720]
-
-                    if len(sequence) < 720:
-                        deficit = 720 - len(sequence)
-                        for det in range(deficit):
-                            sequence = np.vstack((sequence,dummy))
-
-                if sequence is None:
-                    print("Can't find sequence. Did you generate them?")
-                    sys.exit()  # TODO this should raise
-
-                if concat:
-                    # We want to pass the sequence back as a single array. This
-                    # is used to pass into a fully connected neural network rather than an RNN.
-                    sequence = np.concatenate(sequence).ravel()
-
-                X.append(sequence)
-                # Get encoded description here
-                X1.append(sample[5].strip())
-                y.append(self.get_class_one_hot(sample[1]))
-                # Get one hot encoding here
-                y1.append(genre_dict[sample[4].strip()])
-
-            # Frame representations, descriptions, score class and genre
+            # Frame features, descriptions, score class and genre class
             yield [np.array(X), np.array(X1)], [np.array(y), np.array(y1)]
 
-    def build_image_sequence(self, frames):
-        """Given a set of frames (filenames), build our sequence."""
-        return [self.process_image(x, self.image_shape) for x in frames]
 
     def get_extracted_sequence(self, data_type, sample):
         """Get the saved extracted features."""
@@ -188,26 +207,6 @@ class DataSet():
 
         # Cut off the last one if needed.
         return output
-
-    def print_class_from_prediction(self, predictions, nb_to_return=5):
-        """Given a prediction, print the top classes."""
-        # Get the prediction for each label.
-        label_predictions = {}
-        for i, label in enumerate(data.classes):
-            label_predictions[label] = predictions[i]
-
-        # Now sort them.
-        sorted_lps = sorted(
-            label_predictions.items(),
-            key=operator.itemgetter(1),
-            reverse=True
-        )
-
-        # And return the top N.
-        for i, class_prediction in enumerate(sorted_lps):
-            if i > nb_to_return - 1 or class_prediction[1] == 0.0:
-                break
-            print("%s: %.2f" % (class_prediction[0], class_prediction[1]))
 
     def process_image(self, image, target_shape):
         """Given an image, process it and return the array."""
