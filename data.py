@@ -26,17 +26,22 @@ class DataSet():
         # Get the data.
         self.data = self.get_data()
 
+        # Dictionary created with the entire train and test summaries together
+        self.dictionary = {}
+        self.summary_pad_length = 100
+
         # Contain intermediate info for the entire dataset
         self.score_classes = self.get_score_classes()
         self.genre_classes = self.get_genre_classes()
         self.summaries = self.get_summaries()
-        self.features = self.get_features()
 
         # Contain the final data split into train and test
         self.train = {}
         self.test = {}
 
         self.split_train_test()
+
+        print 'Loaded data and split into train/test'
 
         self.image_shape = image_shape
 
@@ -97,69 +102,85 @@ class DataSet():
         genre_classes = []
         for item in self.data:
             genre = item[7]
-            genre_classes.append(genre_class_dict[genre])
+            final_genre_one_hot = [0.0] * 5
+            final_genre_one_hot[genre_class_dict[genre]] = 1.0
+            genre_classes.append(final_genre_one_hot)
         return genre_classes
 
 
     def get_summaries(self):
         summaries = []
+        cnt = 1
         for item in self.data:
             summary = item[4]
-            summaries.append(summary)
-        return summaries
-
-
-    def get_features(self):
-        features = []
-        dummy = np.asarray([0 for el in range(2048)]) # Inception feature layer output size
+            words = summary.strip().split(' ')
+            for word in words:
+                if word not in self.dictionary:
+                    self.dictionary[word] = cnt
+                    cnt += 1
         for item in self.data:
-            sequence = self.get_extracted_sequence("features", item)
-            if len(sequence) > 360:
-                sequence = sequence[:360]
-            if len(sequence) < 360:
-                deficit = 360 - len(sequence)
-                for det in range(deficit):
-                    sequence = np.vstack((sequence,dummy))
-            feeatures.append(sequence)
-        return features
+            summary = item[4]
+            current_summary = []
+            words = summary.strip().split(' ')
+            for word in words:
+                current_summary.append(self.dictionary[word])
+            current_summary = current_summary[:self.summary_pad_length]
+            while len(current_summary) < self.summary_pad_length:
+                current_summary.append(0)
+            summaries.append(current_summary)
+        print 'Dictionary size:', len(self.dictionary)
+        return summaries
 
 
     def split_train_test(self):
         """Split the data into train and test groups."""
         train_percent = 0.8
-        train_elems = {"score":[], "genre":[], "features":[], "summary":[]}
-        test_elems = {"score":[], "genre":[], "features":[], "summary":[]}
+        train_elems = {"score":[], "genre":[], "features":[], "summary":[], "original_data_index":[]}
+        test_elems = {"score":[], "genre":[], "features":[], "summary":[], "original_data_index":[]}
         for item_idx in range(len(self.data)):
-            if random.uniform() <= train_percent:
+            if random.uniform(0, 1) <= train_percent:
                 train_elems["score"].append(self.score_classes[item_idx])
                 train_elems["genre"].append(self.genre_classes[item_idx])
-                train_elems["features"].append(self.features[item_idx])
                 train_elems["summary"].append(self.summaries[item_idx])
+                train_elems["original_data_index"].append(item_idx)
             else:
                 test_elems["score"].append(self.score_classes[item_idx])
                 test_elems["genre"].append(self.genre_classes[item_idx])
-                test_elems["features"].append(self.features[item_idx])
                 test_elems["summary"].append(self.summaries[item_idx])
+                test_elems["original_data_index"].append(item_idx)
 
         self.train = train_elems
         self.test = test_elems
 
+
+    def get_features_for_datapoint(self, data_idx):
+        dummy = np.asarray([0 for el in range(2048)]) # Inception feature layer output size
+        sequence = self.get_extracted_sequence("features", self.data[data_idx])
+        if len(sequence) > 360:
+            sequence = sequence[:360]
+        if len(sequence) < 360:
+            deficit = 360 - len(sequence)
+            for det in range(deficit):
+                sequence = np.vstack((sequence,dummy))
+        return sequence
+
+
     def frame_generator_features(self, batch_size, train_test):
         data = self.train if train_test == 'train' else self.test
-
-        print("Creating %s generator with %d samples." % (train_test, len(data)))
+        print("Creating %s generator with %d samples." % (train_test, len(data["score"])))
 
         while 1:
             X, X1, y, y1 = [], [], [], []
             for _ in range(batch_size):
-                sample = random.randint(0, len(data))
-                X.append(data["features"][sample])
+                sample = random.randint(0, len(data["score"])-1)
+                X.append(self.get_features_for_datapoint(data["original_data_index"][sample]))
                 X1.append(data["summary"][sample])
                 y.append(data["score"][sample])
                 y1.append(data["genre"][sample])
 
             # Frame features, descriptions, score class and genre class
-            yield [np.array(X), np.array(X1)], [np.array(y), np.array(y1)]
+            #yield [np.array(X), np.array(X1)], [np.array(y), np.array(y1)]
+            yield [np.array(X), np.array(X1)], np.array(y)
 
 
     def get_extracted_sequence(self, data_type, sample):

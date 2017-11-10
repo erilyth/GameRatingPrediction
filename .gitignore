@@ -5,3 +5,4 @@ data/checkpoints
 data/logs
 **/*.pyc
 Scraping/dataset
+finalmodels/*
